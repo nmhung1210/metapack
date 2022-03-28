@@ -1,10 +1,10 @@
 {
   "name": "datapack",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "rm -rf lib && tsc && cp package.json lib/package.json",
+    "build": "rm -rf lib && tsc && cp README.md lib/ && cp package.json lib/package.json",
     "test": "ts-mocha -p tsconfig.json src/**/*.spec.ts"
   },
   "repository": {
