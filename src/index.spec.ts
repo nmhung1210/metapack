@@ -26,10 +26,12 @@ describe("MetaPack test", () => {
     expect(unpack(pack(2000000000, INT32), INT32)).toBe(2000000000);
     expect(unpack(pack(true, BOOL), BOOL)).toBe(true);
     expect(unpack(pack(false, BOOL), BOOL)).toBe(false);
-    
-    expect(unpack(pack(Buffer.from("abc"), BINARY), BINARY).toString()).toBe("abc");
+
+    expect(unpack(pack(Buffer.from("abc"), BINARY), BINARY).toString()).toBe(
+      "abc"
+    );
     expect(unpack(pack("abc", STRING), STRING)).toBe("abc");
-    expect(unpack(pack({abc:100}, OBJECT), OBJECT)).toEqual({abc:100});
+    expect(unpack(pack({ abc: 100 }, OBJECT), OBJECT)).toEqual({ abc: 100 });
 
     expect(unpack(pack(BigInt("10000000000"), UINT64), UINT64).toString()).toBe(
       "10000000000"
@@ -123,4 +125,68 @@ describe("MetaPack test", () => {
     };
     expect(unpack(pack(value, schema), schema)).toEqual(value);
   });
+
+  console.log(unpack(pack({ abc: 100 }, OBJECT), OBJECT));
 });
+
+// pack simple object
+const profile = {
+  userId: 101,
+  nickName: "ABC",
+  isVip: true,
+  age: 34,
+};
+const profileSchema = {
+  userId: UINT32,
+  nickName: STRING,
+  isVip: BOOL,
+  age: UINT8,
+};
+const packedBuffer = pack(profile, profileSchema);
+
+const unpackedProfile = unpack(packedBuffer, profileSchema);
+console.log(profile, unpackedProfile);
+
+
+// To pack list of profiles
+const listProfiles = [profile, profile, profile];
+const listProfileSchema = [profileSchema];
+
+const packedListProfile = pack(listProfiles, listProfileSchema);
+const unpackedListProfile = unpack(packedListProfile, listProfileSchema);
+
+console.log(listProfiles, unpackedListProfile);
+
+
+// To pack more complex data structure
+const stateData = {
+  users: [profile, profile, profile],
+  posts:[
+    {
+      postId: 100,
+      title: "Hello World!",
+      score: 999,
+      authors: [
+        profile
+      ]   
+    }
+  ]
+}
+const stateDataSchema = {
+  users: listProfileSchema,
+  posts: [
+    {
+      postId: UINT32,
+      title: STRING,
+      score: UINT16,
+      authors: [
+        profileSchema
+      ]      
+    }
+  ]
+}
+
+const packedState = pack(stateData, stateDataSchema);
+const unpackedState = unpack(packedState, stateDataSchema);
+
+console.log(stateData, unpackedState);

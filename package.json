@@ -1,22 +1,22 @@
 {
-  "name": "metapack",
-  "version": "1.0.0",
+  "name": "datapack",
+  "version": "1.1.1",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf lib && tsc && cp package.json lib/package.json",
     "test": "ts-mocha -p tsconfig.json src/**/*.spec.ts"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nmhung1210/metapack.git"
+    "url": "git+https://github.com/nmhung1210/datapack.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/nmhung1210/metapack/issues"
+    "url": "https://github.com/nmhung1210/datapack/issues"
   },
-  "homepage": "https://github.com/nmhung1210/metapack#readme",
+  "homepage": "https://github.com/nmhung1210/datapack#readme",
   "dependencies": {
     "buffer": "^6.0.3"
   },

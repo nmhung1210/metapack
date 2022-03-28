@@ -1,5 +1,4 @@
 import { Buffer } from "buffer/index";
-
 export enum DataTypes {
   UINT8 = 0,
   UINT16,
@@ -38,7 +37,7 @@ export type Schema =
   | { [name: string]: Schema | Schema[] | Schema[] };
 
 const CHUNK_SIZE = 10240;
-export const pack = (data: any, dataSchema: Schema) => {
+export const pack = (data: any, dataSchema: Schema | Array<Schema>) => {
   let buff = Buffer.alloc(CHUNK_SIZE);
   let pos = 0;
   const prepare = (size: number) => {
@@ -47,7 +46,7 @@ export const pack = (data: any, dataSchema: Schema) => {
       buff = Buffer.alloc(buff.length + incsize, buff);
     }
   };
-  const doPack = (data: any, schema: Schema) => {
+  const doPack = (data: any, schema: Schema | Array<Schema>) => {
     if (typeof schema === "number") {
       prepare(8);
       switch (schema) {
@@ -109,16 +108,39 @@ export const pack = (data: any, dataSchema: Schema) => {
     }
   };
   doPack(data, dataSchema);
+  let checksum = 0;
+  for (let i = 0; i < pos; i++) {
+    checksum += buff[i];
+    buff[i] = buff[i] + i;
+  }
+  pos = buff.writeInt16BE(checksum, pos);
   return buff.slice(0, pos);
 };
 
-export const unpack = (data: Buffer | ArrayBuffer | string, schema: Schema) => {
+export const unpack = <T = any>(
+  data: ArrayBufferLike | ArrayBuffer | Uint8Array | string,
+  schema: Schema | Array<Schema>
+): T => {
   const buff = data instanceof Buffer ? data : Buffer.from(data as any);
+  if (!buff || buff.length < 2) {
+    throw new Error("Invalid package!");
+  }
   let pos = 0;
   const inc = (size: number) => {
     pos += size;
   };
-  const doUnpack = (schema: Schema) => {
+
+  let checksum = 0;
+  for (let i = 0; i < buff.length - 2; i++) {
+    buff[i] = buff[i] - i;
+    checksum += buff[i];
+  }
+  const validchecksum = buff.readInt16BE(buff.length - 2);
+  if (checksum !== validchecksum) {
+    throw new Error("Data mismatch!");
+  }
+
+  const doUnpack = (schema: Schema | Array<Schema>) => {
     if (typeof schema === "number") {
       let val: any;
       switch (schema) {
