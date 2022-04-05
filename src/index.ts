@@ -36,13 +36,35 @@ export type Schema =
   | DataTypes[]
   | { [name: string]: Schema | Schema[] | Schema[] };
 
-const CHUNK_SIZE = 10240;
-export const pack = (data: any, dataSchema: Schema | Array<Schema>) => {
-  let buff = Buffer.alloc(CHUNK_SIZE);
+
+export interface IPackConfig {
+  chunkSize: number;
+  useEncrypt: boolean;
+  useCheckSum: boolean;
+  secret: number;
+
+}
+export interface IPackConfigOptions {
+  chunkSize?: number;
+  useEncrypt?: boolean;
+  useCheckSum?: boolean;
+  secret?: number;
+}
+
+const defaultConfig: IPackConfig = {
+  chunkSize: 10240,
+  useEncrypt: true,
+  useCheckSum: true,
+  secret: 1210
+};
+
+export const pack = (data: any, dataSchema: Schema | Array<Schema>, opt?: IPackConfigOptions) => {
+  const conf = Object.assign({}, defaultConfig, opt || {});
+  let buff = Buffer.alloc(conf.chunkSize);
   let pos = 0;
   const prepare = (size: number) => {
     if (buff.byteLength <= pos + size) {
-      const incsize = size + CHUNK_SIZE;
+      const incsize = size + conf.chunkSize;
       buff = Buffer.alloc(buff.length + incsize, buff);
     }
   };
@@ -108,19 +130,27 @@ export const pack = (data: any, dataSchema: Schema | Array<Schema>) => {
     }
   };
   doPack(data, dataSchema);
-  let checksum = 0;
-  for (let i = 0; i < pos; i++) {
-    checksum += buff[i];
-    buff[i] = buff[i] + i;
+  if (conf.useCheckSum || conf.useEncrypt) {
+    let checksum = 0;
+    for (let i = 0; i < pos; i++) {
+      checksum += buff[i];
+      if (conf.useEncrypt) {
+        buff[i] = buff[i] + i + conf.secret;
+      }
+    }
+    if (conf.useCheckSum) {
+      pos = buff.writeInt16BE(checksum, pos);
+    }
   }
-  pos = buff.writeInt16BE(checksum, pos);
   return buff.slice(0, pos);
 };
 
 export const unpack = <T = any>(
   data: ArrayBufferLike | ArrayBuffer | Uint8Array | string,
-  schema: Schema | Array<Schema>
+  schema: Schema | Array<Schema>,
+  opt?: IPackConfigOptions
 ): T => {
+  const conf = Object.assign({}, defaultConfig, opt || {});
   const buff = data instanceof Buffer ? data : Buffer.from(data as any);
   if (!buff || buff.length < 2) {
     throw new Error("Invalid package!");
@@ -129,17 +159,21 @@ export const unpack = <T = any>(
   const inc = (size: number) => {
     pos += size;
   };
-
-  let checksum = 0;
-  for (let i = 0; i < buff.length - 2; i++) {
-    buff[i] = buff[i] - i;
-    checksum += buff[i];
+  if (conf.useCheckSum || conf.useEncrypt) {
+    let checksum = 0;
+    for (let i = 0; i < buff.length - 2; i++) {
+      if (conf.useEncrypt) {
+        buff[i] = buff[i] - i - conf.secret;
+      }
+      checksum += buff[i];
+    }
+    if (conf.useCheckSum) {
+      const validchecksum = buff.readInt16BE(buff.length - 2);
+      if (checksum !== validchecksum) {
+        throw new Error("Data mismatch!");
+      }
+    }
   }
-  const validchecksum = buff.readInt16BE(buff.length - 2);
-  if (checksum !== validchecksum) {
-    throw new Error("Data mismatch!");
-  }
-
   const doUnpack = (schema: Schema | Array<Schema>) => {
     if (typeof schema === "number") {
       let val: any;
