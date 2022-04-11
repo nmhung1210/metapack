@@ -139,7 +139,7 @@ export const pack = (data: any, dataSchema: Schema | Array<Schema>, opt?: IPackC
       }
     }
     if (conf.useCheckSum) {
-      pos = buff.writeInt16BE(checksum, pos);
+      pos = buff.writeInt16BE(checksum % 32000, pos);
     }
   }
   return buff.slice(0, pos);
@@ -167,6 +167,7 @@ export const unpack = <T = any>(
       }
       checksum += buff[i];
     }
+    checksum = checksum % 32000;
     if (conf.useCheckSum) {
       const validchecksum = buff.readInt16BE(buff.length - 2);
       if (checksum !== validchecksum) {
